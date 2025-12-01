@@ -1,0 +1,43 @@
+paths:
+  raw_data: "data/dataset.csv"
+  prepared_dir: "data/"
+  X_train: "data/X_train.npy"
+  X_test: "data/X_test.npy"
+  y_train: "data/y_train.npy"
+  y_test: "data/y_test.npy"
+  metrics_output: "metrics.txt"
+
+preprocessing:
+  fill_age_with: "median"
+  drop_columns:
+    - PassengerId
+    - Name
+    - Ticket
+    - Cabin
+  scale_features: true
+
+split:
+  test_size: 0.2
+  random_state: 42
+
+models:
+  LogisticRegression:
+    penalty: "l2"
+    C: 1.0
+    max_iter: 200
+
+  DecisionTree:
+    max_depth: 4
+    criterion: "gini"
+
+  SVM:
+    kernel: "linear"
+    C: 1.0
+
+metrics:
+  compute:
+    - accuracy
+    - precision
+    - recall
+    - f1
+    - confusion_matrix

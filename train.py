@@ -1,4 +1,5 @@
 import numpy as np
+import yaml
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.svm import SVC
@@ -6,70 +7,67 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 import warnings
 warnings.filterwarnings('ignore')
 
+def load_model(name, params):
+    if name == "LogisticRegression":
+        return LogisticRegression(**params)
+    if name == "DecisionTree":
+        return DecisionTreeClassifier(**params)
+    if name == "SVM":
+        return SVC(**params)
+    
+    raise ValueError(f"Unknown model: {name}")
+
 def train_and_evaluate():
+    with open("config.yaml", "r") as f:
+        config = yaml.safe_load(f)
+
     # Load prepared data
-    X_train = np.load('data/X_train.npy')
-    X_test = np.load('data/X_test.npy')
-    y_train = np.load('data/y_train.npy')
-    y_test = np.load('data/y_test.npy')
-    
-    models = {
-        'Logistic Regression': LogisticRegression(),
-        'Decision Tree': DecisionTreeClassifier(),
-        'Support Vector Machine': SVC(kernel='linear')
-    }
-    
+    X_train = np.load(config["paths"]["X_train"])
+    X_test = np.load(config["paths"]["X_test"])
+    y_train = np.load(config["paths"]["y_train"])
+    y_test = np.load(config["paths"]["y_test"])
+
     results = {}
-    
-    for name, model in models.items():
-        # Train model
+
+    for model_name, params in config["models"].items():
+        model = load_model(model_name, params)
+
         model.fit(X_train, y_train)
-        
-        # Make predictions
         y_pred = model.predict(X_test)
-        
-        # Calculate metrics
-        accuracy = accuracy_score(y_test, y_pred)
-        precision = precision_score(y_test, y_pred, zero_division=0)
-        recall = recall_score(y_test, y_pred, zero_division=0)
-        f1 = f1_score(y_test, y_pred, zero_division=0)
-        cm = confusion_matrix(y_test, y_pred)
-        
-        results[name] = {
-            'accuracy': accuracy,
-            'precision': precision,
-            'recall': recall,
-            'f1': f1,
-            'confusion_matrix': cm.tolist()
-        }
-        
-        print(f"\n{name} Results:")
-        print(f"Accuracy: {accuracy:.4f}")
-        print(f"Precision: {precision:.4f}")
-        print(f"Recall: {recall:.4f}")
-        print(f"F1-Score: {f1:.4f}")
-    
-    # Save best model and metrics
-    best_model = max(results, key=lambda x: results[x]['accuracy'])
-    best_accuracy = results[best_model]['accuracy']
-    
-    # Write metrics to file
-    with open('metrics.txt', 'w') as f:
+
+        results[model_name] = {}
+
+        if "accuracy" in config["metrics"]["compute"]:
+            results[model_name]["accuracy"] = accuracy_score(y_test, y_pred)
+        if "precision" in config["metrics"]["compute"]:
+            results[model_name]["precision"] = precision_score(y_test, y_pred)
+        if "recall" in config["metrics"]["compute"]:
+            results[model_name]["recall"] = recall_score(y_test, y_pred)
+        if "f1" in config["metrics"]["compute"]:
+            results[model_name]["f1"] = f1_score(y_test, y_pred)
+        if "confusion_matrix" in config["metrics"]["compute"]:
+            results[model_name]["confusion_matrix"] = confusion_matrix(y_test, y_pred).tolist()
+
+        print(f"\n{model_name} Results:", results[model_name])
+
+    # Select best model by accuracy
+    best_model = max(results, key=lambda x: results[x].get("accuracy", 0))
+
+    # Save metrics
+    with open(config["paths"]["metrics_output"], "w") as f:
         f.write("MODEL EVALUATION METRICS\n")
-        f.write("="*50 + "\n\n")
-        
+        f.write("="*40 + "\n\n")
+
         for name, metrics in results.items():
             f.write(f"{name}:\n")
-            f.write(f"  Accuracy:  {metrics['accuracy']:.4f}\n")
-            f.write(f"  Precision: {metrics['precision']:.4f}\n")
-            f.write(f"  Recall:    {metrics['recall']:.4f}\n")
-            f.write(f"  F1-Score:  {metrics['f1']:.4f}\n")
-            f.write(f"  Confusion Matrix: {metrics['confusion_matrix']}\n\n")
-        
-        f.write(f"\nBEST MODEL: {best_model} (Accuracy: {best_accuracy:.4f})\n")
-    
-    print(f"\nMetrics saved to metrics.txt")
-    print(f"Best model: {best_model} with accuracy {best_accuracy:.4f}")
+            for m, v in metrics.items():
+                f.write(f"  {m}: {v}\n")
+            f.write("\n")
+
+        f.write(f"BEST MODEL: {best_model}\n")
+
+    print(f"\nMetrics saved to {config['paths']['metrics_output']}")
+    print(f"Best Model: {best_model}")
 
 if __name__ == "__main__":
     train_and_evaluate()
