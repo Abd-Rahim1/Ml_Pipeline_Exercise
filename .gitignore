@@ -1,0 +1,18 @@
+# Data files
+data/*.npy
+!data/dataset.csv
+!data/feature_names.txt
+
+# Output files
+metrics.txt
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Model files
+*.pkl
+*.pickle
+*.joblib
+models/
